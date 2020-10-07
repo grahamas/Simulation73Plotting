@@ -2,8 +2,8 @@ module Simulation73Plotting
 
 using Simulation73
 
-using AbstractPlotting
-using Makie, MakieLayout
+using AbstractPlotting, AbstractPlotting.MakieLayout
+using Makie
 
 using AxisIndices
 using IterTools
