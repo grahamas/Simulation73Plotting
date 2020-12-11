@@ -77,11 +77,14 @@ function animate_execution(filename::AbstractString, execution::AbstractFullExec
     max_val = maximum(solution)
 	min_val = minimum(solution)
     
-    scene = Scene();
+    scene, layout = layoutscene();
     time_idx_node = Node(1)
     single_pop = lift(idx -> population_timepoint(solution, 1, idx), time_idx_node)
+    title = lift(idx -> "t = $(t[idx])", time_idx_node)
     @assert size(single_pop[]) == (length(x), length(y))
-    heatmap!(scene, x, y, single_pop, colorrange=(min_val,max_val))
+    layout[1,1] = LText(scene, title, tellwidth=false)
+    layout[1,2] = ax = LAxis(scene, title=title)
+    heatmap!(ax, x, y, single_pop, colorrange=(min_val,max_val))
     
     record(scene, filename, 1:length(t); framerate=fps) do time_idx # TODO @views
         time_idx_node[] = time_idx
@@ -95,7 +98,7 @@ function exec_heatmap(exec::AbstractExecution; kwargs...)
 end
 
 function exec_heatmap!(scene::Scene, exec::AbstractExecution; 
-                       clims=nothing, no_labels=false)
+                       clims=nothing, no_labels=false, title=nothing)
     layout = GridLayout()
     soln = exec.solution
     t = soln.t
@@ -119,6 +122,10 @@ function exec_heatmap!(scene::Scene, exec::AbstractExecution;
     hideydecorations!.(hm_axes[2:end])
     cbar = layout[:, length(pop_names) + 1] = LColorbar(scene, heatmaps[1])
     cbar.width = 25
+
+    if title != nothing
+        layout[0,:] = LText(scene, title, tellwidth=false)
+    end
   
     if !no_labels
         ylabel = layout[:,0] = LText(scene, "space (μm)", rotation=pi/2, tellheight=false)
