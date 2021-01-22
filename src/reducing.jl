@@ -9,7 +9,7 @@ function mean_skip_missing(A::AbstractArray; dims)
 end
 
 function avg_across_dims(arr, dims)
-    avgd = mean_skip_missing(arr, dims=dims)
+    avgd = mean_skip_missing(arr; dims=dims)
     squeezed = dropdims(avgd, dims=dims)
     return squeezed
 end
