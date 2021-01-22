@@ -20,7 +20,7 @@ function heatmap_slices_execution(exec::AbstractExecution, n_slices=5, resolutio
     heatmaps = map(1:length(pop_names)) do idx_pop
         ax = hm_axes[idx_pop]
         pop_activity = cat(population.(soln.u, idx_pop)..., dims=2)
-        heatmap!(ax, t[t_idx_subs], xs[xs_idx_subs], pop_activity[xs_idx_subs,t_idx_subs].parent')
+        heatmap!(ax, t[t_idx_subs], xs[xs_idx_subs], parent(pop_activity[xs_idx_subs,t_idx_subs])')
     end
     tightlimits!.(hm_axes)
     linkaxes!(hm_axes...)
@@ -51,28 +51,10 @@ function heatmap_slices_execution(exec::AbstractExecution, n_slices=5, resolutio
 end
 
 function animate_execution(filename::AbstractString, execution::AbstractFullExecution{T,<:Simulation{T,M}}; fps=20, kwargs...) where {T, M<:AbstractModel{T,1}}
+    @show "extracting variables"
     solution = execution.solution
     pop_names = execution.simulation.model.pop_names
     x = coordinate_axes(Simulation73.reduced_space(execution))[1]
-    t = timepoints(execution)
-    max_val = maximum(solution)
-	min_val = minimum(solution)
-    
-    scene = Scene();
-    time_idx_node = Node(1)
-    single_pop = lift(idx -> population_timepoint(solution, 1, idx), time_idx_node)
-    lines!(scene, x, single_pop)
-    ylims!(scene, (min_val, max_val))
-    
-    record(scene, filename, 1:length(t); framerate=fps) do time_idx # TODO @views
-        time_idx_node[] = time_idx
-    end
-end
-
-function animate_execution(filename::AbstractString, execution::AbstractFullExecution{T,<:Simulation{T,M}}; fps=20, kwargs...) where {T, M<:AbstractModel{T,2}}
-    solution = execution.solution
-    pop_names = execution.simulation.model.pop_names
-    x,y = coordinate_axes(Simulation73.reduced_space(execution))
     t = timepoints(execution)
     max_val = maximum(solution)
 	min_val = minimum(solution)
@@ -81,15 +63,41 @@ function animate_execution(filename::AbstractString, execution::AbstractFullExec
     time_idx_node = Node(1)
     single_pop = lift(idx -> population_timepoint(solution, 1, idx), time_idx_node)
     title = lift(idx -> "t = $(t[idx])", time_idx_node)
-    @assert size(single_pop[]) == (length(x), length(y))
-    layout[1,1] = LText(scene, title, tellwidth=false)
-    layout[1,2] = ax = LAxis(scene, title=title)
-    heatmap!(ax, x, y, single_pop, colorrange=(min_val,max_val))
+    ax = layout[1,1] = LAxis(scene, title=title)
+    lines!(ax, x, single_pop)
+    @show single_pop
+    @show x
+    @show (min_val, max_val)
+    ylims!(ax, (min_val, max_val))
     
+    @show "animating $(length(t)) frames"
     record(scene, filename, 1:length(t); framerate=fps) do time_idx # TODO @views
+        @show time_idx
         time_idx_node[] = time_idx
     end
 end
+
+# function animate_execution(filename::AbstractString, execution::AbstractFullExecution{T,<:Simulation{T,M}}; fps=20, kwargs...) where {T, M<:AbstractModel{T,2}}
+#     solution = execution.solution
+#     pop_names = execution.simulation.model.pop_names
+#     x,y = coordinate_axes(Simulation73.reduced_space(execution))
+#     t = timepoints(execution)
+#     max_val = maximum(solution)
+# 	min_val = minimum(solution)
+    
+#     scene, layout = layoutscene();
+#     time_idx_node = Node(1)
+#     single_pop = lift(idx -> population_timepoint(solution, 1, idx), time_idx_node)
+#     title = lift(idx -> "t = $(t[idx])", time_idx_node)
+#     @assert size(single_pop[]) == (length(x), length(y))
+#     # layout[1,1] = LText(scene, title, tellwidth=false)
+#     layout[1,1] = ax = LAxis(scene, title=title)
+#     heatmap!(ax, x, y, single_pop, colorrange=(min_val,max_val))
+    
+#     record(scene, filename, 1:length(t); framerate=fps) do time_idx # TODO @views
+#         time_idx_node[] = time_idx
+#     end
+# end
 
 function exec_heatmap(exec::AbstractExecution; kwargs...)
     scene, layout = layoutscene(resolution=(1200, 1200))
@@ -97,39 +105,43 @@ function exec_heatmap(exec::AbstractExecution; kwargs...)
     return scene
 end
 
-function exec_heatmap!(scene::Scene, exec::AbstractExecution; 
-                       clims=nothing, no_labels=false, title=nothing)
+function exec_heatmap!(scene::Scene, exec::AbstractExecution;
+        no_labels=false, title=nothing, cbar_width=nothing, axis_kwargs=Dict(), kwargs...)
     layout = GridLayout()
     soln = exec.solution
     t = soln.t
     xs = coordinate_axes(Simulation73.reduced_space(exec))[1] |> collect
     pop_names = exec.simulation.model.pop_names
 
-    hm_axes = layout[1,1:length(pop_names)] = [LAxis(scene, title = "$pop_name activity") for pop_name in pop_names]
+    hm_axes = layout[1:length(pop_names), 1] = [LAxis(scene; axis_kwargs...) for pop_name in pop_names]
     heatmaps = map(1:length(pop_names)) do idx_pop
         ax = hm_axes[idx_pop]
         pop_activity = cat(population.(soln.u, idx_pop)..., dims=2)
         #if clims !== nothing
-        htmp = heatmap!(ax, t, xs, pop_activity.parent')
+        htmp = heatmap!(ax, t, xs, parent(pop_activity)'; kwargs...)
+        if cbar_width !== nothing
+            cbar = layout[idx_pop,2] = LColorbar(scene, heatmaps[idx_pop], width=Auto(true))
+            cbar.width = cbar_width
+        end
+
         #else
-        #    heatmap!(ax, t, xs, pop_activity.parent', clims=clims)
+        #    heatmap!(ax, t, xs, parent(pop_activity)', clims=clims)
         #end
         ax.xticks = [0, floor(Int,t[end])]
         htmp
     end
     tightlimits!.(hm_axes)
     linkaxes!(hm_axes...)
-    hideydecorations!.(hm_axes[2:end])
-    cbar = layout[:, length(pop_names) + 1] = LColorbar(scene, heatmaps[1])
-    cbar.width = 25
+    hideydecorations!.(hm_axes)#[2:end])
+    hidexdecorations!.(hm_axes[1:end-1])
 
-    if title != nothing
+    if title !== nothing
         layout[0,:] = LText(scene, title, tellwidth=false)
     end
   
     if !no_labels
-        ylabel = layout[:,0] = LText(scene, "space (μm)", rotation=pi/2, tellheight=false)
-        xlabel = layout[end+1,2:3] = LText(scene, "time (ms)")
+        ylabel = layout[2,0] = LText(scene, "space (μm)", rotation=pi/2, tellheight=false)
+        xlabel = layout[end+1,2:3] = LText(scene, "time (ms)", tellwidth=false)
     end
     return layout
 end 
