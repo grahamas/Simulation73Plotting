@@ -100,13 +100,14 @@ end
 # end
 
 function exec_heatmap(exec::AbstractExecution; kwargs...)
-    scene, layout = layoutscene(resolution=(1200, 1200))
+    scene, layout = layoutscene(resolution=(600, 1200))
     layout[1,1] = exec_heatmap!(scene, exec; kwargs...)
+    trim!(layout)
     return scene
 end
 
 function exec_heatmap!(scene::Scene, exec::AbstractExecution;
-        no_labels=false, title=nothing, cbar_width=nothing, axis_kwargs=Dict(), kwargs...)
+        no_labels=false, title=nothing, colorbar_width=25, axis_kwargs=Dict(), kwargs...)
     layout = GridLayout()
     soln = exec.solution
     t = soln.t
@@ -114,19 +115,21 @@ function exec_heatmap!(scene::Scene, exec::AbstractExecution;
     pop_names = exec.simulation.model.pop_names
 
     hm_axes = layout[1:length(pop_names), 1] = [LAxis(scene; axis_kwargs...) for pop_name in pop_names]
+    u_max = maximum(maximum.(soln.u))
+    u_min = minimum(minimum.(soln.u))
+    clims = if u_max == u_min
+        if 0. ≤ u_max ≤ 1.
+            [0., 1.]
+        else
+            [clims-0.5, clims+0.5]
+        end
+    else
+        [min(0., u_min), u_max]
+    end
     heatmaps = map(1:length(pop_names)) do idx_pop
         ax = hm_axes[idx_pop]
         pop_activity = cat(population.(soln.u, idx_pop)..., dims=2)
-        #if clims !== nothing
-        htmp = heatmap!(ax, t, xs, parent(pop_activity)'; kwargs...)
-        if cbar_width !== nothing
-            cbar = layout[idx_pop,2] = LColorbar(scene, heatmaps[idx_pop], width=Auto(true))
-            cbar.width = cbar_width
-        end
-
-        #else
-        #    heatmap!(ax, t, xs, parent(pop_activity)', clims=clims)
-        #end
+        htmp = heatmap!(ax, t, xs, parent(pop_activity)'; colorrange=clims, kwargs...)
         ax.xticks = [0, floor(Int,t[end])]
         htmp
     end
@@ -135,13 +138,15 @@ function exec_heatmap!(scene::Scene, exec::AbstractExecution;
     hideydecorations!.(hm_axes)#[2:end])
     hidexdecorations!.(hm_axes[1:end-1])
 
+    cbar = layout[length(pop_names),2] = LColorbar(scene, heatmaps[begin], width=colorbar_width, vertical=true)
+
     if title !== nothing
         layout[0,:] = LText(scene, title, tellwidth=false)
     end
   
     if !no_labels
         ylabel = layout[2,0] = LText(scene, "space (μm)", rotation=pi/2, tellheight=false)
-        xlabel = layout[end+1,2:3] = LText(scene, "time (ms)", tellwidth=false)
+        xlabel = layout[end+1,2] = LText(scene, "time (ms)", tellwidth=false)
     end
     return layout
 end 
