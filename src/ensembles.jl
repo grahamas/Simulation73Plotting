@@ -26,7 +26,7 @@ function sweep_2D_slice_heatmaps(scene, A::NamedAxisArray;
     layout[:,1] = Label.(Ref(scene), mod_names[1:end-1], tellheight=false, rotation=pi/2)
     layout[end+1,2:end] = Label.(scene, mod_names[2:end], tellwidth=false)
     layout[0, :] = Label(scene, title, textsize = 30)
-    cbar = layout[2:end-1, end+1] = LColorbar(scene, heatmaps[1], label = "Proportion classified")
+    cbar = layout[2:end-1, end+1] = Colorbar(scene, heatmaps[1], label = "Proportion classified")
     cbar.width = 25
     return layout
 end

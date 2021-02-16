@@ -42,7 +42,7 @@ function heatmap_slices_execution(exec::AbstractExecution, n_slices=5, resolutio
         slices_layout        
     end
     layout[1,pop_idxs] = hm_axes
-    cbar = layout[1, end+1] = LColorbar(scene, heatmaps[1], label = "Activity Level")
+    cbar = layout[1, end+1] = Colorbar(scene, heatmaps[1], label = "Activity Level")
     cbar.width = 25
 
     ylabel = layout[:,0] = Label(scene, "space (μm)", rotation=pi/2, tellheight=false)
@@ -128,8 +128,13 @@ function exec_heatmap!(scene::Scene, exec::AbstractExecution;
     end
     heatmaps = map(1:length(pop_names)) do idx_pop
         ax = hm_axes[idx_pop]
-        pop_activity = cat(population.(soln.u, idx_pop)..., dims=2)
-        htmp = heatmap!(ax, t, xs, parent(pop_activity)'; colorrange=clims, kwargs...)
+        @show size(soln.u)
+        @show size(soln.u[begin])
+        pop_activity = zeros(length(soln.u), length(population(soln.u[begin], idx_pop)))
+        for t_idx in 1:length(soln.u)
+            pop_activity[t_idx,:] .= population(parent(soln.u[t_idx]), idx_pop)
+        end
+        htmp = heatmap!(ax, t, xs, pop_activity; colorrange=clims, kwargs...)
         ax.xticks = [0, floor(Int,t[end])]
         htmp
     end
@@ -138,7 +143,7 @@ function exec_heatmap!(scene::Scene, exec::AbstractExecution;
     hideydecorations!.(hm_axes)#[2:end])
     hidexdecorations!.(hm_axes[1:end-1])
 
-    cbar = layout[length(pop_names),2] = LColorbar(scene, heatmaps[begin], width=colorbar_width, vertical=true)
+    cbar = layout[length(pop_names),2] = Colorbar(scene, heatmaps[begin], width=colorbar_width, vertical=true)
 
     if title !== nothing
         layout[0,:] = Label(scene, title, tellwidth=false)
