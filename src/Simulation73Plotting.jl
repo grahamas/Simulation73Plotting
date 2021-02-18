@@ -14,7 +14,7 @@ export mean_skip_missing,
 
 include("executions.jl")
 export heatmap_slices_execution, animate_execution,
-    exec_heatmap, exec_heatmap!,
+    exec_heatmap, exec_heatmap!, isolimit_exec_heatmaps!,
     exec_heatmap_slices
 
 include("ensembles.jl")

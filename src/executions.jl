@@ -157,3 +157,28 @@ function exec_heatmap!(fig::Figure, exec::AbstractExecution; title=nothing,
     return layout
 end 
 
+function isolimit_exec_heatmaps!(fig::Figure, 
+        execs::AbstractArray{<:AbstractExecution}
+        ; 
+        titles = [nothing for exec in execs],
+        colorbar_width = 25,
+        max_val_sigdigits = 2,
+        kwargs...
+    )
+    layout = GridLayout()
+
+    max_val = maximum(maximum.(execs))
+    min_val = 0
+    color_limits = [min_val, ceil(max_val, sigdigits=max_val_sigdigits)]
+    for (i_exec, exec) in enumerate(execs)
+        layout[1:2,i_exec] = exec_heatmap!(fig, exec
+            ; clims=color_limits, colorbar_width = 0,
+            title = titles[i_exec]
+        )
+    end
+    exec_axis = content(layout[1:2,1][2,1])
+    exec_heatmap = exec_axis.scene.plots |> only
+    cbar = layout[2,length(execs)+1] = Colorbar(fig, exec_heatmap, height = exec_axis.height, width=colorbar_width, vertical=true, ticks=color_limits)#,ticklabels=string.(clims))
+
+    return layout
+end
