@@ -100,36 +100,44 @@ end
 # end
 
 function exec_heatmap(exec::AbstractExecution; kwargs...)
-    scene, layout = layoutscene(resolution=(600, 1200))
-    layout[1,1] = exec_heatmap!(scene, exec; kwargs...)
-    trim!(layout)
-    return scene
+    fig = Figure(resolution=(600, 1200))
+    fig[1,1] = exec_heatmap!(fig, exec; kwargs...)
+    trim!(fig)
+    return fig
 end
 
-function exec_heatmap!(scene::Scene, exec::AbstractExecution;
-        no_labels=false, title=nothing, colorbar_width=25, axis_kwargs=Dict(), kwargs...)
+function exec_heatmap!(fig::Figure, exec::AbstractExecution; title=nothing, 
+        clims = nothing, colorbar_width=25, 
+        axis_kwargs=Dict(), 
+        ylabel="space (μm)", xlabel="time (ms)", kwargs...
+    )
     layout = GridLayout()
     soln = exec.solution
     t = soln.t
     xs = coordinate_axes(Simulation73.reduced_space(exec))[1] |> collect
     pop_names = exec.simulation.model.pop_names
 
-    hm_axes = layout[1:length(pop_names), 1] = [MakieLayout.Axis(scene; axis_kwargs...) for pop_name in pop_names]
+    hm_axes = layout[1:length(pop_names), 1] = [AbstractPlotting.Axis(fig; axis_kwargs...) for pop_name in pop_names]
+    if title !== nothing
+        hm_axes[begin].title = title
+    end
+    hm_axes[end].xlabel = xlabel
+    hm_axes[end].ylabel = ylabel
     u_max = maximum(maximum.(soln.u))
     u_min = minimum(minimum.(soln.u))
-    clims = if u_max == u_min
+    clims = if clims !== nothing
+        clims 
+    elseif u_max == u_min
         if 0. ≤ u_max ≤ 1.
             [0., 1.]
         else
-            [clims-0.5, clims+0.5]
+            [floor(clims-0.5; sigdigits=2), ceil(clims+0.5; sigdigits=2)]
         end
     else
-        [min(0., u_min), u_max]
+        [floor(min(0., u_min); sigdigits=2), ceil(u_max; sigdigits=2)]
     end
     heatmaps = map(1:length(pop_names)) do idx_pop
         ax = hm_axes[idx_pop]
-        @show size(soln.u)
-        @show size(soln.u[begin])
         pop_activity = zeros(length(soln.u), length(population(soln.u[begin], idx_pop)))
         for t_idx in 1:length(soln.u)
             pop_activity[t_idx,:] .= population(parent(soln.u[t_idx]), idx_pop)
@@ -143,15 +151,8 @@ function exec_heatmap!(scene::Scene, exec::AbstractExecution;
     hideydecorations!.(hm_axes)#[2:end])
     hidexdecorations!.(hm_axes[1:end-1])
 
-    cbar = layout[length(pop_names),2] = Colorbar(scene, heatmaps[begin], width=colorbar_width, vertical=true)
-
-    if title !== nothing
-        layout[0,:] = Label(scene, title, tellwidth=false)
-    end
-  
-    if !no_labels
-        ylabel = layout[2,0] = Label(scene, "space (μm)", rotation=pi/2, tellheight=false)
-        xlabel = layout[end+1,2] = Label(scene, "time (ms)", tellwidth=false)
+    if colorbar_width > 0
+        cbar = layout[length(pop_names),2] = Colorbar(fig, heatmaps[begin], width=colorbar_width, vertical=true, ticks=[clims...])#,ticklabels=string.(clims))
     end
     return layout
 end 
