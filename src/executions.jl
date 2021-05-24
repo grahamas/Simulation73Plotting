@@ -117,7 +117,7 @@ function exec_heatmap!(fig::Figure, exec::AbstractExecution; title=nothing,
     xs = coordinate_axes(Simulation73.reduced_space(exec))[1] |> collect
     pop_names = exec.simulation.model.pop_names
 
-    hm_axes = layout[1:length(pop_names), 1] = [AbstractPlotting.Axis(fig; axis_kwargs...) for pop_name in pop_names]
+    hm_axes = layout[1:length(pop_names), 1] = [Makie.Axis(fig; axis_kwargs...) for pop_name in pop_names]
     if title !== nothing
         hm_axes[begin].title = title
     end
