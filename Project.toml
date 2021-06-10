@@ -1,7 +1,7 @@
 name = "Simulation73Plotting"
 uuid = "2846d769-be22-4083-a76c-fdabc4869842"
 authors = ["Graham Smith <grahams@uchicago.edu>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 AxisIndices = "f52c9ee2-1b1c-4fd8-8546-6350938c7f11"
