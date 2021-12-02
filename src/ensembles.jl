@@ -1,8 +1,8 @@
 
-function sweep_2D_slice_heatmaps(scene, A::NamedAxisArray; 
+function sweep_2D_slice_heatmaps(scene, A::NamedDimsArray, A_dims::NamedTuple; 
                        plot_color = :magma, title = "FILLER")
-    mod_names = [string(name) for name in keys(named_axes(A))]
-    mod_values = keys.(values(named_axes(A))) 
+    mod_names = [string(name) for name in keys(A_dims)]
+    mod_values = values(A_dims)
     all_dims = 1:length(mod_names)
     slices_2d = IterTools.subsets(all_dims, Val{2}())
     #plot_side_size = 350 * (length(all_dims) - 1)

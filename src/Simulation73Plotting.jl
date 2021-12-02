@@ -4,7 +4,8 @@ using Simulation73
 
 using Makie, Makie.MakieLayout
 
-using AxisIndices
+using NamedDims
+
 using IterTools
 
 include("reducing.jl")
@@ -18,6 +19,5 @@ export heatmap_slices_execution, animate_execution,
 
 include("ensembles.jl")
 export sweep_2D_slice_heatmaps
-
 
 end # module
