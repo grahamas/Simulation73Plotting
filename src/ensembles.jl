@@ -1,6 +1,6 @@
 
 function sweep_2D_slice_heatmaps(fig::Figure, A::NamedDimsArray, A_dims::NamedTuple; 
-                       plot_color = :magma, title = "FILLER")
+                       plot_color = :magma, title = "FILLER", colorrange=(minimum(A),maximum(A)), dimension_reduction=avg_across_dims)
     mod_names = [string(name) for name in keys(A_dims)]
     mod_values = values(A_dims)
     all_dims = 1:length(mod_names)
@@ -12,7 +12,7 @@ function sweep_2D_slice_heatmaps(fig::Figure, A::NamedDimsArray, A_dims::NamedTu
     heatmaps = map(slices_2d) do (x,y)
         (x,y) = x < y ? (x,y) : (y,x)
         collapsed_dims = Tuple(setdiff(all_dims, (x,y)))
-        mean_values = avg_across_dims(A, collapsed_dims)
+        mean_values = dimension_reduction(A, collapsed_dims)
         my = mod_values[y] |> collect
         mx = mod_values[x] |> collect
         
@@ -20,13 +20,13 @@ function sweep_2D_slice_heatmaps(fig::Figure, A::NamedDimsArray, A_dims::NamedTu
         
         layout[x,y] = ax = MakieLayout.Axis(fig); 
         tightlimits!(ax)
-        heatmap!(ax, my, mx, parent(mean_values)', colorrange=(0,1), color=plot_color)
+        heatmap!(ax, my, mx, parent(mean_values)', colorrange=colorrange, color=plot_color)
             #xlab=mod_names[y], ylab=mod_names[x], color=plot_color, title="prop epileptic"),
     end
     layout[:,1] = Label.(Ref(fig), mod_names[1:end-1], tellheight=false, rotation=pi/2)
-    layout[end+1,2:end] = Label.(fig, mod_names[2:end], tellwidth=false)
+    layout[end+1,2:end] = Label.(Ref(fig), mod_names[2:end], tellwidth=false)
     layout[0, :] = Label(fig, title, textsize = 30)
-    cbar = layout[2:end-1, end+1] = Colorbar(fig, heatmaps[1], label = "Proportion classified")
+    cbar = layout[2:end-1, end+1] = Colorbar(fig, heatmaps[1])
     cbar.width = 25
     return layout
 end
