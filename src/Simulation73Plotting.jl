@@ -8,9 +8,7 @@ using NamedDims
 
 using IterTools
 
-include("reducing.jl")
-export mean_skip_missing,
-       avg_across_dims
+using NamedDimsHelpers
 
 include("executions.jl")
 export heatmap_slices_execution, animate_execution,
